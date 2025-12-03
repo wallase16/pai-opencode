@@ -73,41 +73,56 @@ check_python() {
 install_piper() {
     log_info "Installing Piper TTS..."
 
-    # Create virtual environment for Piper (handles externally managed environments)
+    # Try virtual environment first (preferred)
     PAI_VENV="$HOME/.pai-venv"
-    if [ ! -d "$PAI_VENV" ]; then
+    if python3 -c "import venv" 2>/dev/null; then
         log_info "Creating Python virtual environment..."
-        python3 -m venv "$PAI_VENV"
-        if [ $? -ne 0 ]; then
-            log_error "Failed to create virtual environment. Please install python3-venv:"
-            echo "  sudo apt install python3-venv"
-            exit 1
+        python3 -m venv "$PAI_VENV" 2>/dev/null
+        if [ $? -eq 0 ] && [ -f "$PAI_VENV/bin/python3" ]; then
+            log_info "Using virtual environment for Piper installation"
+
+            # Activate virtual environment and install Piper
+            source "$PAI_VENV/bin/activate"
+            python3 -m pip install --upgrade pip
+            pip install piper-tts[http]
+
+            if [ $? -eq 0 ]; then
+                log_success "Piper TTS installed successfully in virtual environment"
+                # Create symlink to make piper available globally
+                ln -sf "$PAI_VENV/bin/piper" "$HOME/.local/bin/piper" 2>/dev/null || \
+                log_warning "Piper available at $PAI_VENV/bin/piper"
+                export PATH="$PAI_VENV/bin:$PATH"
+            else
+                log_error "Failed to install Piper TTS in virtual environment"
+                deactivate
+                return 1
+            fi
+            deactivate
+            return 0
         fi
     fi
 
-    # Activate virtual environment and install Piper
-    source "$PAI_VENV/bin/activate"
+    # Fallback: Try installing system-wide with break-system-packages
+    log_warning "Virtual environment not available, trying system-wide installation..."
+    log_warning "This may require manual intervention if it fails"
 
-    # Upgrade pip in virtual environment
-    python3 -m pip install --upgrade pip
-
-    # Install Piper with HTTP server support
-    pip install piper-tts[http]
-
-    if [ $? -eq 0 ]; then
-        log_success "Piper TTS installed successfully in virtual environment"
-        # Create symlink to make piper available globally
-        if [ ! -f "/usr/local/bin/piper" ]; then
-            sudo ln -sf "$PAI_VENV/bin/piper" /usr/local/bin/piper 2>/dev/null || \
-            log_warning "Could not create global symlink (requires sudo) - piper available at $PAI_VENV/bin/piper"
-        fi
-    else
-        log_error "Failed to install Piper TTS"
-        exit 1
+    # Try with break-system-packages flag (PEP 668 workaround)
+    if python3 -m pip install --break-system-packages piper-tts[http] 2>/dev/null; then
+        log_success "Piper TTS installed system-wide (break-system-packages)"
+        return 0
     fi
 
-    # Deactivate virtual environment
-    deactivate
+    # Last resort: Try without break-system-packages (might work on some systems)
+    if python3 -m pip install piper-tts[http] 2>/dev/null; then
+        log_success "Piper TTS installed (system may have allowed it)"
+        return 0
+    fi
+
+    log_error "Failed to install Piper TTS. Please install manually:"
+    echo "  python3 -m pip install --break-system-packages piper-tts[http]"
+    echo "  # or"
+    echo "  sudo apt install python3-venv  # then re-run this script"
+    return 1
 }
 
 # Download voice models
@@ -117,19 +132,25 @@ download_voices() {
     # Create voices directory
     mkdir -p opencode/voices/models
 
-    # Activate virtual environment and download voices
-    PAI_VENV="$HOME/.pai-venv"
-    source "$PAI_VENV/bin/activate"
+    # Try to find piper executable
+    PIPER_CMD=""
+    if [ -f "$HOME/.pai-venv/bin/piper" ]; then
+        PIPER_CMD="$HOME/.pai-venv/bin/piper"
+    elif [ -f "$HOME/.local/bin/piper" ]; then
+        PIPER_CMD="$HOME/.local/bin/piper"
+    elif command -v piper &> /dev/null; then
+        PIPER_CMD="piper"
+    else
+        log_error "Piper executable not found"
+        return 1
+    fi
 
     # Download essential voices
-    piper download_voices \
+    $PIPER_CMD download_voices \
         en_US-lessac-medium \
         en_US-ryan-medium \
         en_US-amy-medium \
         en_GB-alan-medium
-
-    # Deactivate virtual environment
-    deactivate
 
     if [ $? -eq 0 ]; then
         log_success "Voice models downloaded"
@@ -236,18 +257,24 @@ start_voice_server() {
         return
     fi
 
-    # Activate virtual environment and start server
-    PAI_VENV="$HOME/.pai-venv"
-    source "$PAI_VENV/bin/activate"
+    # Try to find piper executable
+    PIPER_CMD=""
+    if [ -f "$HOME/.pai-venv/bin/piper" ]; then
+        PIPER_CMD="$HOME/.pai-venv/bin/piper"
+    elif [ -f "$HOME/.local/bin/piper" ]; then
+        PIPER_CMD="$HOME/.local/bin/piper"
+    elif command -v piper &> /dev/null; then
+        PIPER_CMD="piper"
+    else
+        log_error "Piper executable not found - cannot start voice server"
+        return 1
+    fi
 
     # Start server in background
-    nohup piper http_server \
+    nohup $PIPER_CMD http_server \
         --model en_US-lessac-medium \
         --data_dir opencode/voices/models \
         --port 5000 > opencode/voices/piper-server.log 2>&1 &
-
-    # Deactivate virtual environment
-    deactivate
 
     # Wait a moment for server to start
     sleep 3
