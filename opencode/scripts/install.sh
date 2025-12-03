@@ -73,24 +73,41 @@ check_python() {
 install_piper() {
     log_info "Installing Piper TTS..."
 
-    if command -v pip3 &> /dev/null; then
-        PIP_CMD="pip3"
-    elif command -v pip &> /dev/null; then
-        PIP_CMD="pip"
-    else
-        log_error "pip is not available. Please install pip."
-        exit 1
+    # Create virtual environment for Piper (handles externally managed environments)
+    PAI_VENV="$HOME/.pai-venv"
+    if [ ! -d "$PAI_VENV" ]; then
+        log_info "Creating Python virtual environment..."
+        python3 -m venv "$PAI_VENV"
+        if [ $? -ne 0 ]; then
+            log_error "Failed to create virtual environment. Please install python3-venv:"
+            echo "  sudo apt install python3-venv"
+            exit 1
+        fi
     fi
 
+    # Activate virtual environment and install Piper
+    source "$PAI_VENV/bin/activate"
+
+    # Upgrade pip in virtual environment
+    python3 -m pip install --upgrade pip
+
     # Install Piper with HTTP server support
-    $PIP_CMD install piper-tts[http]
+    pip install piper-tts[http]
 
     if [ $? -eq 0 ]; then
-        log_success "Piper TTS installed successfully"
+        log_success "Piper TTS installed successfully in virtual environment"
+        # Create symlink to make piper available globally
+        if [ ! -f "/usr/local/bin/piper" ]; then
+            sudo ln -sf "$PAI_VENV/bin/piper" /usr/local/bin/piper 2>/dev/null || \
+            log_warning "Could not create global symlink (requires sudo) - piper available at $PAI_VENV/bin/piper"
+        fi
     else
         log_error "Failed to install Piper TTS"
         exit 1
     fi
+
+    # Deactivate virtual environment
+    deactivate
 }
 
 # Download voice models
@@ -100,12 +117,19 @@ download_voices() {
     # Create voices directory
     mkdir -p opencode/voices/models
 
+    # Activate virtual environment and download voices
+    PAI_VENV="$HOME/.pai-venv"
+    source "$PAI_VENV/bin/activate"
+
     # Download essential voices
-    python3 -m piper.download_voices \
+    piper download_voices \
         en_US-lessac-medium \
         en_US-ryan-medium \
         en_US-amy-medium \
         en_GB-alan-medium
+
+    # Deactivate virtual environment
+    deactivate
 
     if [ $? -eq 0 ]; then
         log_success "Voice models downloaded"
@@ -212,11 +236,18 @@ start_voice_server() {
         return
     fi
 
+    # Activate virtual environment and start server
+    PAI_VENV="$HOME/.pai-venv"
+    source "$PAI_VENV/bin/activate"
+
     # Start server in background
-    nohup python3 -m piper.http_server \
+    nohup piper http_server \
         --model en_US-lessac-medium \
-        --data-dir opencode/voices/models \
+        --data_dir opencode/voices/models \
         --port 5000 > opencode/voices/piper-server.log 2>&1 &
+
+    # Deactivate virtual environment
+    deactivate
 
     # Wait a moment for server to start
     sleep 3
