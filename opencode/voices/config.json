@@ -1,0 +1,66 @@
+{
+  "_comment": "PAI OpenCode Voice Configuration - Optimized for quality and performance",
+  "providers": {
+    "piper": {
+      "enabled": true,
+      "server_port": 5000,
+      "description": "Free neural TTS with 4 optimized voices",
+      "quality": "high",
+      "voices": {
+        "kai": "en_US-lessac-medium",
+        "engineer": "en_US-ryan-medium",
+        "researcher": "en_US-amy-medium",
+        "designer": "en_GB-alan-medium",
+        "architect": "en_US-lessac-medium",
+        "pentester": "en_US-ryan-medium"
+      },
+      "voice_characteristics": {
+        "en_US-lessac-medium": "Professional male voice - clear, authoritative",
+        "en_US-ryan-medium": "Technical male voice - confident, precise",
+        "en_US-amy-medium": "Analytical female voice - clear, intelligent",
+        "en_GB-alan-medium": "Creative male voice - distinctive, British accent"
+      },
+      "optimization": {
+        "length_scale": 1.0,
+        "noise_scale": 0.667,
+        "noise_w": 0.8,
+        "target_latency": "<500ms"
+      }
+    },
+    "elevenlabs": {
+      "enabled": false,
+      "description": "Premium cloud TTS (requires API key)",
+      "quality": "premium",
+      "api_key": null,
+      "voices": {
+        "kai": "s3TPKV1kjDlVtZbl4Ksh",
+        "engineer": "fATgBRI8wg5KkDFg8vBd",
+        "researcher": "AXdMgz6evoL7OPd7eU12",
+        "designer": "ZF6FPAbjXT4488VcRRnw",
+        "architect": "muZKMsIDGYtIkjjiUS82",
+        "pentester": "xvHLFjaUEpx4BOf7EiDd"
+      }
+    },
+    "toast": {
+      "enabled": true,
+      "description": "OpenCode text notifications (always available)",
+      "quality": "text-only",
+      "fallback": true
+    }
+  },
+  "fallback_order": ["piper", "elevenlabs", "toast"],
+  "default_provider": "piper",
+  "performance_targets": {
+    "response_time": "<500ms",
+    "success_rate": ">99%",
+    "voice_quality": "neural"
+  },
+  "agent_voice_mapping": {
+    "kai": "Professional, clear male voice for main assistant",
+    "engineer": "Technical, confident male voice for development",
+    "researcher": "Analytical, clear female voice for analysis",
+    "designer": "Creative, distinctive male voice for design",
+    "architect": "Professional male voice for system design",
+    "pentester": "Technical male voice for security testing"
+  }
+}
