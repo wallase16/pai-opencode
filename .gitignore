@@ -1,3 +1,26 @@
-settings.json
-node_modules/
+# --- Sensitive Data ---
+Memories/
+*.log
 .env
+.env.*
+settings.json
+pai_activity.log
+
+# --- System/OS ---
+.DS_Store
+Thumbs.db
+node_modules/
+dist/
+build/
+
+# --- OpenCode/IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Temporary ---
+tmp/
+temp/
+backup/
+*.bak

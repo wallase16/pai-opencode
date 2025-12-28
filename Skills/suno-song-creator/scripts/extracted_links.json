@@ -1,0 +1,11 @@
+{
+  "success": true,
+  "message": "Top 2 most recent share links extracted from test HTML (per Suno workflow)",
+  "share_links": [
+    "https://suno.com/song/a5044751-ffef-4341-8c2d-05b7c689fb56",
+    "https://suno.com/song/e45fed37-db0c-47b3-93e4-af4f0b26fb95"
+  ],
+  "songs_generated": 2,
+  "extraction_method": "top_2_recent",
+  "workflow_note": "Suno always puts the 2 most recently generated songs at the top of the library"
+}
