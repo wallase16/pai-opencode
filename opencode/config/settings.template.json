@@ -1,0 +1,4 @@
+{
+  "PAI_DIR": "/path/to/your/pai/workspace",
+  "_setupNote": "PAI_DIR auto-configured for OpenCode compatibility v0.9.1"
+}
