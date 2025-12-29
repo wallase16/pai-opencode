@@ -2,54 +2,38 @@
 
 ## Objective
 Establish a robust, "Platform Agnostic" integration between **OpenCode** and the official **Personal AI Infrastructure (PAI)** repository (v0.9.1+).
-The goal is to treat `pai-opencode` not as a fork of the content, but as the **OpenCode Adapter** that enables PAI on this platform.
 
 ## Architecture
-*   **PAI Core (Data):** `~/Workspaces/pai-opencode` (Will mirror the official `danielmiessler/Personal_AI_Infrastructure` structure exactly).
-*   **Adapter (Logic):** `~/.config/opencode/plugin/pai-adapter.ts` (Renamed from `pai-core.ts`).
-    *   Reads `PAI_DIR` from `settings.json`.
-    *   Bridges OpenCode events (`session.idle`) to PAI workflows.
-    *   Injects PAI Skills into OpenCode's native skill system.
+*   **PAI Core (Data):** `~/Workspaces/pai-opencode` (Mirror of official v0.9.1 structure).
+*   **Adapter (Logic):** `~/.config/opencode/plugin/pai-adapter.ts`.
 
-## Migration Steps
+## Migration Phases
 
 ### Phase 1: Standardization (The "Clean Slate")
-align `~/Workspaces/pai-opencode` strictly with the official v0.9.1 spec.
-1.  **Backup:** Archive current workspace.
-2.  **Restructure:**
-    *   `Skills/` (Nested: `Skills/CORE/SKILL.md`)
-    *   `Tools/`
-    *   `Memories/`
-    *   `.env`
-    *   `settings.json` (Crucial: Contains `PAI_DIR`)
-3.  **Validation:** Verify structure against official repo spec.
+Align `~/Workspaces/pai-opencode` strictly with the official v0.9.1 spec.
+1.  **Backup:** Archive current workspace and config.
+2.  **Scaffold:** Ensure `Skills/`, `Tools/`, `Memories/`, and `settings.json` exist.
 
-### Phase 2: The Adapter (Plugin Development)
-Refactor `pai-core.ts` into `pai-adapter.ts`.
-1.  **Config Loading:** implement logic to read `~/Workspaces/pai-opencode/settings.json` to find `PAI_DIR`.
-2.  **Native Skills:** Instead of a custom tool, the adapter will programmatically `symlink` or `register` the `PAI_DIR/Skills` directory to `~/.opencode/skill` at runtime (or setup time).
-3.  **Event Bridge:** Maintain the `session.idle` -> "COMPLETED" check -> Voice/History trigger.
+### Phase 2: Deduplication & Consolidation (Resolving Conflicts)
+Cleanly merge the illegal `~/.config/opencode/skills` directory into the PAI Workspace.
+1.  **Compare:** Identify skills existing in both locations.
+2.  **Deduplicate:** 
+    *   If a skill is a PAI standard (e.g., `CORE`), keep the version from the workspace.
+    *   If a skill is custom (e.g., `suno-song-creator`), move it to the workspace.
+3.  **Lowercase Renaming:** Rename all skill directories to lowercase during the move to ensure OpenCode native compatibility.
+4.  **Cleanup:** Remove the illegal `~/.config/opencode/skills` directory to allow OpenCode to boot.
 
-### Phase 3: CI/CD & Testing (Local Workflow)
-Ensure reliability before "shipping" the change to your active config.
+### Phase 3: The Adapter (Plugin Development)
+1.  **Config Loading:** Plugin reads `settings.json` for `PAI_DIR`.
+2.  **Native Sync:** `setup-adapter.sh` symlinks `PAI_DIR/Skills/*` to `~/.opencode/skill/*`.
+3.  **Event Bridge:** Maintain `session.idle` hooks for Voice/History.
 
-*   **Setup Script (`setup-adapter.sh`):**
-    *   Installs the PAI structure (if missing).
-    *   Installs/Symlinks the `pai-adapter.ts` plugin.
-    *   Generates `settings.json`.
-    *   **CI Check:** verification step ensuring `opencode models` and `opencode run --help` don't crash.
-
-*   **Verification Script (`verify-pai.sh`):**
-    *   Checks for `PAI_DIR` in `settings.json`.
-    *   Checks if the "CORE" skill is loadable via OpenCode native tools.
-    *   Simulates a "COMPLETED" event to test hooks.
+### Phase 4: CI/CD & Verification
+1.  **Setup:** Run `setup-adapter.sh`.
+2.  **Verify:** Run `verify-pai.sh` to confirm:
+    *   OpenCode boots without "invalid directory" errors.
+    *   Skills are listed natively via `/skill`.
+    *   Identity (CORE) is correctly loaded.
 
 ## Rollback Plan
-*   **Snapshot:** Before applying Phase 1, create a full tarball of `~/.config/opencode` and `~/Workspaces/pai-opencode`.
-*   **Restore Script:** A script to wipe the new setup and untar the snapshot if critical failures occur.
-
-## Success Criteria
-1.  User can clone official PAI repo.
-2.  User runs `setup-adapter.sh`.
-3.  `opencode run "help me"` triggers PAI identity.
-4.  `opencode run "use skill core"` works natively.
+Full restore from `~/pai_backup_*.tar.gz` if verification fails.

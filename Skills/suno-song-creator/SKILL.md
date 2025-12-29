@@ -62,12 +62,29 @@ Uses chrome-mcp tools for browser automation (no Node.js/puppeteer dependencies)
 7. **Extract Links**: Parse HTML content to find song URLs
 8. **Download**: Navigate to song pages and trigger downloads
 
-## Current Selectors (Updated 2025)
+## Current Selectors (Verified Dec 2025)
 
-- **Lyrics Textarea**: `body > div:nth-of-type(1) > ... > textarea`
-- **Styles Textarea**: `textarea[placeholder*="indie, electronic, synths"]`
-- **Song Title Input**: `body > div:nth-of-type(1) > ... > input`
+- **Custom Mode Toggle**: `button` with text "Custom" (Must click if Lyrics/Style inputs are missing).
+- **Lyrics Textarea**: `textarea[placeholder*="Write some lyrics"]`
+- **Styles Textarea**: `textarea[placeholder*="fuerte"]` (Note: Placeholder examples like 'fuerte' may rotate. Check for 'Style' or 'Genre' keywords if this fails).
+- **Song Title Input**: `input[placeholder*="Song Title"]` (Note: Often hidden or optional).
 - **Create Button**: `button[aria-label="Create song"]`
+- **Cloudflare Check**: Title contains "Waiting Room powered by Cloudflare"
+
+## Deterministic Workflow
+1.  **Check Access**: Verify page title is NOT "Waiting Room". If it is, wait/retry.
+2.  **Verify Login**: Check for "Sign In" button or Redirect to `/login`.
+3.  **Ensure Custom Mode**:
+    -   Check if `textarea[placeholder*="Write some lyrics"]` is visible.
+    -   If NOT visible, click `button` with text "Custom".
+    -   Wait 1s for UI to update.
+4.  **Fill Form**:
+    -   Fill Lyrics: `textarea[placeholder*="Write some lyrics"]`
+    -   Fill Style: `textarea[placeholder*="fuerte"]`
+    -   Fill Title (Optional): `input[placeholder*="Song Title"]`
+5.  **Generate**: Click `button[aria-label="Create song"]`.
+6.  **Verify**: Check for new items in "My Workspace" list (e.g. "Generating..." or new style name).
+
 
 ## Error Handling
 
